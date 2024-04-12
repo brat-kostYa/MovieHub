@@ -1,4 +1,4 @@
-import React, { FC, useState } from "react";
+import React, { FC, useState, useEffect } from "react";
 import { PhoneInput } from 'react-international-phone';
 import 'react-international-phone/style.css';
 import '../register/custom.css';
@@ -6,40 +6,33 @@ import { Form, Row, Col, Button, InputGroup } from "react-bootstrap";
 import { useUserAuth } from "../../../context/userAuthContext";
 import { useNavigate } from "react-router-dom";
 import { FaEyeSlash, FaEye } from "react-icons/fa";
-
-// const initialValue: IRegister = {
-//     firstName: '',
-//     secondName: '',
-//     lastName: '',
-//     gender: '',
-//     email: '',
-//     country: '',
-//     password: '',
-//     age: 18,
-//     phoneNumber: '',
-//     keyQuestion: '',
-//     keyAnswer: ''
-// };
+import { doc, setDoc } from "firebase/firestore"
+import { auth, db, } from '../../../lib/firebaseConfig';
+import parsePhoneNumber from 'libphonenumber-js';
+import { IProfileResponse } from "../../../interfaces/IAuth";
 
 interface IRegisterProps { };
 
 const Register: FC<IRegisterProps> = () => {
-    const [formData, setFormData] = useState({
+    const initialFormData: IProfileResponse = {
         firstName: '',
         secondName: '',
         lastName: '',
         gender: '',
         email: '',
         password: '',
-        confirmPassword: '',
+        country: '',
         age: 18,
         phoneNumber: '',
-        favouriteFilm: ''
-    });
-    const { signUp } = useUserAuth();
+        profileUrl: '',
+        userId: '',
+        favouriteFilm: '',
+        emailVerified: false,
+        dateOfBirth: ''
+    };
+    const [formData, setFormData] = useState<IProfileResponse>(initialFormData)
+    const { signUp, user } = useUserAuth();
     const navigate = useNavigate();
-    const [age, setAge] = useState(18);
-    const [phone, setPhone] = useState('');
     const [emailValidated, setEmailValidated] = useState(false);
     const [upperValidated, setUpperValidated] = useState(false);
     const [lowerValidated, setLowerValidated] = useState(false);
@@ -48,6 +41,10 @@ const Register: FC<IRegisterProps> = () => {
     const [numbersValidated, setNumbersValidated] = useState(false);
     const [confirmPassword, setConfirmedPassword] = useState(false);
     const [showPassword, setShowPassword] = useState(false);
+
+    useEffect(() => {
+        console.log('formData оновлено:', formData);
+      }, [formData]);
 
     const handlePasswordChange = (value: string) => {
         const upper = new RegExp('(?=.*[A-Z])');
@@ -98,11 +95,17 @@ const Register: FC<IRegisterProps> = () => {
         } else {
             setConfirmedPassword(false);
         }
+    };
 
-        setFormData(prevState => ({
-            ...prevState,
-            confirmPassword: value
-        }));
+    const handlePhoneChange = (value: string) => {
+        const phoneNumber = parsePhoneNumber(value);
+        if (phoneNumber) {
+            setFormData(prevState => ({
+                ...prevState,
+                country: phoneNumber.country || '',
+                phoneNumber: phoneNumber.number
+            }));
+        }
     };
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -111,6 +114,7 @@ const Register: FC<IRegisterProps> = () => {
             ...prevState,
             [name]: value
         }));
+        console.log('Variable updated:', { name, value });
     };
 
     const handleGenderChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
@@ -130,24 +134,70 @@ const Register: FC<IRegisterProps> = () => {
         handleChange(e);
     }
 
-    const handleChangeAge = (e: React.ChangeEvent<HTMLInputElement>) => {
-        setAge(parseInt(e.target.value));
+    const handleAgeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const { value } = e.target;
+        setFormData(prevState => ({
+            ...prevState,
+            age: parseInt(value)
+        }));
     };
+
+    const handleDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const { value } = e.target;
+        setFormData(prevState => ({
+            ...prevState,
+            dateOfBirth: value
+        }));
+        console.log('Variable updated:', value, '\nformdata: ', formData);
+    };
+
+    const handleNewDoc = async (userId: string) => {
+        try {
+            const docRef = doc(db, "users", userId);
+            console.log('Document: ', docRef);
+            await setDoc(docRef, formData)
+            console.log('Document written with ID: ', docRef.id);
+        } catch (error) {
+            console.error('Error adding document: ', error);
+        }
+    }
 
     const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
         try {
-            console.log("Try register: ", formData)
-            await signUp(formData.email, formData.password)
-            console.log('Form submitted:', formData);
-            navigate('/profile')
-        }
-        catch (error) {
+            if (formData.email && formData.password) {
+                console.log("1:", auth);
+                console.log("1:", user);
+                await signUp(formData.email, formData.password); // Очікуємо завершення реєстрації
+                console.log("3:", auth);
+                console.log("3:", user);
+
+                const currentUser = auth.currentUser;
+                if (currentUser) {
+                    const userId = currentUser.uid;
+                    console.log("User ID:", userId);
+                    formData.userId = userId;
+                    await handleNewDoc(userId); // Очікуємо завершення створення документа
+                    console.log("Document created:", formData);
+                    navigate('/profile');
+                } else {
+                    throw new Error('User not authenticated');
+                }
+            } else {
+                throw new Error('Email or password is missing');
+            }
+        } catch (error) {
             console.log("Error: ", error)
         }
-        // Handle form submission, e.g., send data to server
-
     };
+
+
+    // const setUid = async (value: string) => {
+    //     setFormData(prevState => ({
+    //         ...prevState,
+    //         uid: value
+    //     }));
+    // }
 
     return (
         <div className="d-flex align-items-center justify-content-center">
@@ -171,24 +221,36 @@ const Register: FC<IRegisterProps> = () => {
                         </Col>
                         <Col>
                             <Form.Label>Gender</Form.Label>
-                            <Form.Select name="gender" aria-label="Gender select" onChange={handleGenderChange}>
-                                <option value="male">Male</option>
-                                <option value="female">Female</option>
-                                <option value="other">Other</option>
+                            <Form.Select defaultValue={"Male"} name="gender" aria-label="Gender select" onChange={handleGenderChange}>
+                                <option value="Male">Male</option>
+                                <option value="Female">Female</option>
+                                <option value="Other">Other</option>
                             </Form.Select>
                         </Col>
                     </Row>
                     <Row className="mb-3">
                         <Col sm={4} className="my-1">
                             <Form.Label>Country/Phone number</Form.Label>
-                            <PhoneInput defaultCountry="ua" value={phone} onChange={phone => setPhone(phone)} />
+                            <PhoneInput defaultCountry="ua" value={formData.phoneNumber} onChange={handlePhoneChange} />
                         </Col>
-                        <Col sm={2} className="my-1">
+                        <Col sm={4} className="my-1">
                             <Form.Label>Age</Form.Label>
-                            <Form.Control name="age" readOnly value={age} />
-                            <Form.Range name="ageRange" min={12} max={130} onChange={handleChangeAge} defaultValue={age} value={age} />
+                            <Form.Control name="age" readOnly value={formData.age} />
+                            <Form.Range name="ageRange" min={12} max={130} onChange={handleAgeChange} defaultValue={formData.age}
+                            />
                         </Col>
-                        <Col sm={6} className="my-1">
+                        <Col sm={3} className="my-1">
+                            <Form.Label>Date of birth</Form.Label>
+                            <input
+                                className="text-black p-2 rounded"
+                                type="date"
+                                defaultValue={formData.dateOfBirth}
+                                onChange={handleDateChange}
+                            />
+                        </Col>
+                    </Row>
+                    <Row className="mb-3">
+                        <Col>
                             <Form.Label>Email</Form.Label>
                             <InputGroup>
                                 <Form.Control name="email" aria-describedby="basic-addon2" type="email" placeholder="Email" onChange={handleEmailChange} />
@@ -202,7 +264,6 @@ const Register: FC<IRegisterProps> = () => {
                             )}
                         </Col>
                     </Row>
-
                     <Row className="mb-3">
                         <Col>
                             <Form.Label>Your password</Form.Label>
@@ -213,7 +274,7 @@ const Register: FC<IRegisterProps> = () => {
                                     {showPassword ? <FaEyeSlash /> : <FaEye />}
                                 </Button>
                             </InputGroup>
-                            
+
                             <div className="flex tracker-box">
                                 <div style={{ padding: '5px' }} className={lowerValidated ? 'validated' : 'not-validated'}>
                                     {lowerValidated ? '✔' : '❌'} {/* Unicode symbol for check mark and cross mark */}
@@ -240,11 +301,11 @@ const Register: FC<IRegisterProps> = () => {
                         <Col>
                             <Form.Label>Confirm password</Form.Label>
                             <InputGroup>
-                                <Form.Control name="confirmPassword" type={showPassword ? "text" : "password"} 
+                                <Form.Control name="confirmPassword" type={showPassword ? "text" : "password"}
                                     placeholder="Confirm password" onChange={(e) => handleConfirmPasswordChange(e.target.value)} />
                                 <Button onClick={() => setShowPassword(!showPassword)}>
                                     {showPassword ? <FaEyeSlash /> : <FaEye />}
-                                </Button>    
+                                </Button>
                             </InputGroup>
                             {!confirmPassword && (
                                 <div style={{ color: 'red' }}>Passwords do not match</div>

@@ -1,4 +1,8 @@
-import { User, createUserWithEmailAndPassword, onAuthStateChanged, sendPasswordResetEmail, signInWithEmailAndPassword, signOut } from 'firebase/auth'
+import {
+    AuthCredential, UserCredential, User, createUserWithEmailAndPassword, onAuthStateChanged,
+    reauthenticateWithCredential, sendPasswordResetEmail, signInWithEmailAndPassword, signOut, updatePassword,
+     verifyBeforeUpdateEmail
+} from 'firebase/auth'
 import { createContext, useContext, useEffect, useState } from 'react'
 import { auth } from '../lib/firebaseConfig'
 
@@ -11,8 +15,12 @@ type AuthContextData = {
     logIn: typeof logIn,
     signUp: typeof signUp,
     resetPassword: typeof resetPassword,
-    logOut: typeof logOut
+    logOut: typeof logOut,
+    changePassword: typeof changePassword,
+    changeEmail: typeof changeEmail,
+    reauthenticate: typeof reauthenticate
 }
+
 
 const logIn = (email: string, password: string) => {
     return signInWithEmailAndPassword(auth, email, password);
@@ -24,10 +32,55 @@ const signUp = (email: string, password: string) => {
 
 const logOut = () => {
     signOut(auth);
+    console.log("User out: ", auth.currentUser?.uid)
 };
 
-const resetPassword = (email:string) => {
+const resetPassword = (email: string) => {
     return sendPasswordResetEmail(auth, email)
+}
+
+const changeEmail = async (currentEmail: string, newEmail: string, password: string): Promise<void> => {
+    try {
+        if (auth.currentUser) {
+            const currentUser: User = await signInWithEmailAndPassword(auth, currentEmail, password)
+                .then((userCredential: UserCredential) => userCredential.user);
+
+            await verifyBeforeUpdateEmail(currentUser as User, newEmail).then(() => {
+                console.log("Email updated successfully to: ", newEmail)
+            }).catch((error) => {
+                console.error(error);
+            });
+        }
+    }
+    catch (error) {
+        console.log("Change email discard: ", error)
+    }
+}
+
+const changePassword = async (currentPassword: string, newPassword: string, email: string): Promise<void> => {
+    try {
+        if (auth.currentUser) {
+            const currentUser: User = await signInWithEmailAndPassword(auth, email, currentPassword)
+                .then((userCredential: UserCredential) => userCredential.user);
+
+            await updatePassword(currentUser, newPassword);
+        }
+    }
+    catch (error: any) {
+        console.log("Change password discard: ", error)
+    }
+}
+
+const reauthenticate = async (credential: AuthCredential) => {
+    try {
+        const user = auth.currentUser;
+        if (user) {
+            await reauthenticateWithCredential(user, credential)
+        }
+    }
+    catch (error) {
+        console.log("user null: ", error)
+    }
 }
 
 export const userAuthContext = createContext<AuthContextData>({
@@ -36,19 +89,22 @@ export const userAuthContext = createContext<AuthContextData>({
     signUp,
     resetPassword,
     logOut,
+    changeEmail,
+    changePassword,
+    reauthenticate
 });
 
 export const UserAuthProvider: React.FunctionComponent<IUserAuthProviderProps> = ({ children }) => {
-    const [user, setUser] = useState<User | null> (null);
+    const [user, setUser] = useState<User | null>(null);
 
-    useEffect( () => {
+    useEffect(() => {
         const unsubscribe = onAuthStateChanged(auth, (user) => {
-            if(user) {
+            if (user) {
                 console.log("The logged is user state is: ", user);
                 setUser(user);
             }
 
-            return() => {
+            return () => {
                 unsubscribe();
             }
         })
@@ -59,6 +115,9 @@ export const UserAuthProvider: React.FunctionComponent<IUserAuthProviderProps> =
         signUp,
         resetPassword,
         logOut,
+        changeEmail,
+        changePassword,
+        reauthenticate
     };
     return (
         <userAuthContext.Provider value={value}>{children}</userAuthContext.Provider>
