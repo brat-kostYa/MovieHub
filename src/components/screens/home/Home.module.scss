@@ -1,0 +1,38 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer components {
+	.swiper {
+		@apply w-screen h-[120vh] mx-0;
+
+		& .slide {
+			& .heroItem {
+				@apply w-full h-full flex relative;
+
+				&Col {
+					@apply h-full flex items-center flex-col justify-center;
+				}
+			}
+		}
+
+		& .slide:global(.swiper-slide-active) {
+			& .heroItem {
+				&Col {
+					animation: 0.5s ease-in-out fade;
+				}
+			}
+		}
+	}
+}
+
+@keyframes fade {
+	from {
+		opacity: 0;
+		transform: translateY(-100px);
+	}
+	to {
+		opacity: 1;
+		transform: translateY(0);
+	}
+}
