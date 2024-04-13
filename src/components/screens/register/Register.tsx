@@ -10,6 +10,7 @@ import { doc, setDoc } from "firebase/firestore"
 import { auth, db, } from '../../../lib/firebaseConfig';
 import parsePhoneNumber from 'libphonenumber-js';
 import { IProfileResponse } from "../../../interfaces/IAuth";
+import ReCaptcha from "react-google-recaptcha"
 
 interface IRegisterProps { };
 
@@ -41,10 +42,11 @@ const Register: FC<IRegisterProps> = () => {
     const [numbersValidated, setNumbersValidated] = useState(false);
     const [confirmPassword, setConfirmedPassword] = useState(false);
     const [showPassword, setShowPassword] = useState(false);
+    const [captchaValue, setCaptchaValue] = useState(null);
 
     useEffect(() => {
         console.log('formData оновлено:', formData);
-      }, [formData]);
+    }, [formData]);
 
     const handlePasswordChange = (value: string) => {
         const upper = new RegExp('(?=.*[A-Z])');
@@ -162,8 +164,17 @@ const Register: FC<IRegisterProps> = () => {
         }
     }
 
+    const handlecaptchaValue = (value: any) => {
+        console.log("Captcha: ", value);
+        setCaptchaValue(value);
+    }
+
     const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
+        if (!captchaValue) {
+            alert("Please, complete captcha");
+            return;
+        }
         try {
             if (formData.email && formData.password) {
                 console.log("1:", auth);
@@ -179,6 +190,9 @@ const Register: FC<IRegisterProps> = () => {
                     formData.userId = userId;
                     await handleNewDoc(userId); // Очікуємо завершення створення документа
                     console.log("Document created:", formData);
+
+                    setCaptchaValue(null);
+
                     navigate('/profile');
                 } else {
                     throw new Error('User not authenticated');
@@ -322,7 +336,11 @@ const Register: FC<IRegisterProps> = () => {
                         </Col>
                     </Row>
                     <div className="mb-3 mt-3 text-center">
-                        <Button variant="primary" type="submit" className="mx-auto">
+                        <ReCaptcha
+                            onChange={handlecaptchaValue}
+                            sitekey="6Ld-9LcpAAAAAP8awYDwC_EpPZqawv5Um7nqzQJI"
+                        />
+                        <Button variant="primary" type="submit" className="mx-auto" disabled={!confirmPassword}>
                             Register
                         </Button>
                     </div>

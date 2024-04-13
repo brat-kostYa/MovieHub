@@ -10,7 +10,7 @@ import { PhoneInput } from 'react-international-phone';
 import parsePhoneNumber from 'libphonenumber-js';
 
 const Profile: FC = () => {
-    const { user, changeEmail, changePassword, logOut } = useUserAuth();
+    const { user, changeEmail, changePassword, logOut, updateUserProfilePhoto } = useUserAuth();
     const initialUserData: IProfileResponse = {
         firstName: '',
         secondName: '',
@@ -202,6 +202,7 @@ const Profile: FC = () => {
 
                 const userDocRef = doc(db, 'users', user.uid);
                 await updateDoc(userDocRef, userInfoToUpdate);
+                await updateUserProfilePhoto(userInfoToUpdate.profileUrl)
                 console.log('User info updated in the database:', userInfo);
 
                 setEditMode(false);

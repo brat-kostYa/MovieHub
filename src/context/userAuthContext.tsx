@@ -1,7 +1,7 @@
 import {
     AuthCredential, UserCredential, User, createUserWithEmailAndPassword, onAuthStateChanged,
     reauthenticateWithCredential, sendPasswordResetEmail, signInWithEmailAndPassword, signOut, updatePassword,
-     verifyBeforeUpdateEmail
+     verifyBeforeUpdateEmail, updateProfile
 } from 'firebase/auth'
 import { createContext, useContext, useEffect, useState } from 'react'
 import { auth } from '../lib/firebaseConfig'
@@ -19,6 +19,7 @@ type AuthContextData = {
     changePassword: typeof changePassword,
     changeEmail: typeof changeEmail,
     reauthenticate: typeof reauthenticate
+    updateUserProfilePhoto: typeof updateUserProfilePhoto
 }
 
 
@@ -83,6 +84,20 @@ const reauthenticate = async (credential: AuthCredential) => {
     }
 }
 
+const updateUserProfilePhoto = async (photoUrl: string) => {
+    const user = auth.currentUser;
+    if (user) {
+        try {
+            await updateProfile(user, { photoURL: photoUrl });
+            console.log("Profile photo updated!");
+        } catch (error) {
+            console.error("Updation failed: ", error);
+        }
+    } else {
+        console.log("User isn`t auth");
+    }
+}
+
 export const userAuthContext = createContext<AuthContextData>({
     user: null,
     logIn,
@@ -91,7 +106,8 @@ export const userAuthContext = createContext<AuthContextData>({
     logOut,
     changeEmail,
     changePassword,
-    reauthenticate
+    reauthenticate,
+    updateUserProfilePhoto
 });
 
 export const UserAuthProvider: React.FunctionComponent<IUserAuthProviderProps> = ({ children }) => {
@@ -117,7 +133,8 @@ export const UserAuthProvider: React.FunctionComponent<IUserAuthProviderProps> =
         logOut,
         changeEmail,
         changePassword,
-        reauthenticate
+        reauthenticate,
+        updateUserProfilePhoto
     };
     return (
         <userAuthContext.Provider value={value}>{children}</userAuthContext.Provider>

@@ -8,7 +8,9 @@ import SingleMedia from './components/screens/singleMedia/SingleMedia';
 import Register from './components/screens/register/Register';
 import SignIn from './components/screens/signin/SignIn';
 import Profile from './components/screens/userProfile/Profile';
+import { LocationOnMap, LocationOnMapWrapper } from './components/screens/ourLocation';
 import { UserAuthProvider } from './context/userAuthContext';
+import { LOCATIONS } from './components/screens/ourLocation';
 
 
 const App: FC = () => {
@@ -20,6 +22,8 @@ const App: FC = () => {
                 <UserAuthProvider>
                     <Routes>
                         <Route path='/' element={<Home />} />
+                        <Route path='/ourLocation' element={<LocationOnMapWrapper><LocationOnMap mapId='map_id' 
+                            locations={LOCATIONS} /></LocationOnMapWrapper>} />
                         <Route path='/signin' element={<SignIn />} />
                         <Route path='/register' element={<Register />} />
                         <Route path='/profile' element={<Profile />} />

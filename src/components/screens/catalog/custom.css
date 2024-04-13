@@ -1,0 +1,5 @@
+.gen-sel {
+    border-color: rgb(91, 16, 162); 
+    border: 3px;
+    background: linear-gradient(180deg, rgb(49, 40, 179) 35%, rgb(110, 63, 137) 65%);
+}
