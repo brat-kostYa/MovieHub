@@ -10,7 +10,7 @@ import { doc, setDoc } from "firebase/firestore"
 import { auth, db, } from '../../../lib/firebaseConfig';
 import parsePhoneNumber from 'libphonenumber-js';
 import { IProfileResponse } from "../../../interfaces/IAuth";
-import ReCaptcha from "react-google-recaptcha"
+import ReCaptcha from "react-google-recaptcha";
 
 interface IRegisterProps { };
 
