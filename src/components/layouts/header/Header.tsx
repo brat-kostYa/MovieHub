@@ -25,7 +25,7 @@ const Header: FC = () => {
 				<Link to='/'>
 					<img
 						className='w-36 md:w-40 hover:cursor-pointer'
-						src='https://ik.imagekit.io/d1m0n4ik/MovieCrazy/Logo.png?updatedAt=1688228269319'
+						src='https://ik.imagekit.io/theblubby/Frame%203.png?updatedAt=17091922635499'
 						alt='logo'
 					/>
 				</Link>
